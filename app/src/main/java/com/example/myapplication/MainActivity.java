@@ -1,41 +1,64 @@
 package com.example.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.ImageView;
+import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.bumptech.glide.Glide;
+import com.example.myapplication.model.Item;
+import com.example.myapplication.network.APIManager;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
-    private List<Product> listProduct = new ArrayList<>();
+    TextView tvDate, tvTitle, tvContent;
+    ImageView ivCover;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initData();
+        tvTitle = findViewById(R.id.tvTitle);
+        tvContent = findViewById(R.id.tvContent);
+        tvDate = findViewById(R.id.tvDate);
+        ivCover = findViewById(R.id.ivCover);
 
-        ProductAdapter adapter = new ProductAdapter(this, listProduct);
-
-        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 2);
-
-        RecyclerView rvProduct = findViewById(R.id.rvProduct);
-        rvProduct.setLayoutManager(layoutManager);
-        rvProduct.setAdapter(adapter);
+        getData();
     }
 
-    private void initData()
+    private void getData()
     {
-        listProduct.add(new Product("Product 1", "500.000", R.drawable.p1));
-        listProduct.add(new Product("Product 2", "500.000", R.drawable.p2));
-        listProduct.add(new Product("Product 3", "500.000", R.drawable.p3));
-        listProduct.add(new Product("Product 4", "500.000", R.drawable.p4));
-        listProduct.add(new Product("Product 5", "500.000", R.drawable.p5));
-        listProduct.add(new Product("Product 6", "500.000", R.drawable.p6));
+        Retrofit retrofit = new Retrofit.Builder().baseUrl(APIManager.SERVER_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        APIManager service = retrofit.create(APIManager.class);
+        service.getItemData().enqueue(new Callback<Item>() {
+            @Override
+            public void onResponse(Call<Item> call, Response<Item> response) {
+                if (response.body() == null) {
+                    return;
+                }
+                Item model = response.body();
+                tvTitle.setText(model.getTitle());
+                tvDate.setText(model.getDate());
+                tvContent.setText(model.getContent().getDescription());
+                Glide.with(MainActivity.this).load(model.getImage()).into(ivCover);
+            }
+
+            @Override
+            public void onFailure(Call<Item> call, Throwable t) {
+                Log.d("fail", "onFail: " + t);
+            }
+        });
     }
 }
